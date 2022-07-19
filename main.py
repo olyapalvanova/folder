@@ -4,6 +4,8 @@ import shutil
 
 
 class Folder:
+    MESSAGE = 'Path was wrong. Check it and try again.'
+
     def __init__(self, path):
         self.path = path
 
@@ -11,13 +13,13 @@ class Folder:
         try:
             os.makedirs(self.path)
         except OSError:
-            return 'Path was wrong. Check it and try again.'
+            return self.MESSAGE
 
     def clean(self):
         try:
             shutil.rmtree(self.path)
         except FileNotFoundError:
-            return 'Path was wrong. Check it and try again.'
+            return self.MESSAGE
 
     @classmethod
     def read(cls, path):
@@ -25,14 +27,13 @@ class Folder:
             for _, dirs, _ in os.walk(path):
                 for dir in dirs:
                     f.write('/{}\n'.format(dir))
-        return cls(path)
 
     def compress(self):
         try:
             archived_folders = shutil.make_archive('archived_folders', 'zip',
                                                    self.path)
         except FileNotFoundError:
-            return 'Path was wrong. Check it and try again.'
+            return self.MESSAGE
         with open(archived_folders, 'rb') as f_in, gzip.open('folders_gzip.gz',
                                                              'wb') as f_out:
             f_out.writelines(f_in)
