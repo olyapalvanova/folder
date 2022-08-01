@@ -6,8 +6,11 @@ import shutil
 class Folder:
     MESSAGE = 'Path was wrong. Check it and try again.'
 
-    def __init__(self, path):
-        self.path = path
+    def __init__(self, path, parent=None):
+        if isinstance(parent, Folder):
+            self.path = parent.path + path
+        else:
+            self.path = path
 
     def create(self):
         try:
