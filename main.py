@@ -4,40 +4,70 @@ import shutil
 
 
 class Folder:
-    MESSAGE = 'Path was wrong. Check it and try again.'
+    ARCHIVED_FOLDERS = 'archived_folders'
+    GZIP_FOLDERS = 'folders_gzip.gz'
+
+    children = list()
+    root_folder_id = list()
 
     def __init__(self, path, parent=None):
+        self.path = path
+        self.parent = parent
         if isinstance(parent, Folder):
-            self.path = parent.path + path
-        else:
-            self.path = path
+            self.add_child()
+
+    def add_child(self):
+        if not self.children:
+            self.root_folder_id.append(id(self.parent))
+        if self.root_folder_id[0] != id(self.parent):
+            if self.parent.path in self.children:
+                self.children.remove(self.parent.path)
+        self.path = os.path.join(self.parent.path, self.path)
+        self.children.append(self.path)
+
+    def print_tree(self):
+        space = ' '
+        space_count = 4
+        tree = list()
+        tree.append(self.path)
+        for child in self.children:
+            child = child.replace(self.path, '').replace('/', '',1)
+            child_folders = child.split('/')
+            for i, folder in enumerate(child_folders):
+                folder_name = (i + 1) * space_count * space + folder
+                tree.append(folder_name)
+        print('\n'.join(tree))
 
     def create(self):
-        try:
-            os.makedirs(self.path)
-        except OSError:
-            return self.MESSAGE
+        for child in self.children:
+            try:
+                os.makedirs(child)
+            except OSError as e:
+                raise e
 
     def clean(self):
         try:
             shutil.rmtree(self.path)
-        except FileNotFoundError:
-            return self.MESSAGE
+        except FileNotFoundError as e:
+            raise e
 
-    @classmethod
-    def read(cls, path):
-        with open('folder structure.txt', 'w') as f:
-            for _, dirs, _ in os.walk(path):
-                for dir in dirs:
-                    f.write('/{}\n'.format(dir))
+    @staticmethod
+    def read(path):
+        list_dirs = []
+        for _, dirs, _ in os.walk(path):
+            for folder in dirs:
+                list_dirs.append('/{}\n'.format(folder))
+        return list_dirs
 
     def compress(self):
         try:
-            archived_folders = shutil.make_archive('archived_folders', 'zip',
-                                                   self.path)
-        except FileNotFoundError:
-            return self.MESSAGE
-        with open(archived_folders, 'rb') as f_in, gzip.open('folders_gzip.gz',
-                                                             'wb') as f_out:
+            archived_folders = shutil.make_archive(
+                self.ARCHIVED_FOLDERS, 'zip', self.path
+            )
+        except FileNotFoundError as e:
+            raise e
+        with open(archived_folders, 'rb') as f_in, gzip.open(
+                self.GZIP_FOLDERS, 'wb'
+        ) as f_out:
             f_out.writelines(f_in)
         os.remove(archived_folders)
