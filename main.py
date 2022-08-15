@@ -31,7 +31,7 @@ class Folder:
         tree = list()
         tree.append(self.path)
         for child in self.children:
-            child = child.replace(self.path, '').replace('/', '',1)
+            child = child.replace(self.path, '').replace('/', '', 1)
             child_folders = child.split('/')
             for i, folder in enumerate(child_folders):
                 folder_name = (i + 1) * space_count * space + folder
