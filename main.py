@@ -40,10 +40,15 @@ class Folder:
 
     def create(self):
         for child in self.children:
-            try:
-                os.makedirs(child)
-            except OSError as e:
-                raise e
+            if not os.path.exists(child):
+                try:
+                    os.makedirs(child)
+                except OSError as e:
+                    raise e
+            else:
+                continue
+        self.children.clear()
+        self.root_folder_id.clear()
 
     def clean(self):
         try:
