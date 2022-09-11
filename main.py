@@ -4,64 +4,70 @@ import shutil
 
 
 class Folder:
+    class FolderException(Exception):
+        pass
+
     ARCHIVED_FOLDERS = 'archived_folders'
     GZIP_FOLDERS = 'folders_gzip.gz'
 
-    children = list()
-    root_folder_id = list()
-
     def __init__(self, path, parent=None):
         self.path = path
+        self.children = list()
         self.parent = parent
-        if isinstance(parent, Folder):
-            self.add_child()
+        if parent:
+            parent.add_child(self)
 
-    def add_child(self):
-        if not self.children:
-            self.root_folder_id.append(id(self.parent))
-        if self.root_folder_id[0] != id(self.parent):
-            if self.parent.path in self.children:
-                self.children.remove(self.parent.path)
-        self.path = os.path.join(self.parent.path, self.path)
-        self.children.append(self.path)
+    @property
+    def full_path(self) -> str:
+        if self.parent:
+            return os.path.join(self.parent.full_path, self.path)
+        return self.path
 
-    def print_tree(self):
-        space = ' '
-        space_count = 4
-        tree = list()
-        tree.append(self.path)
+    def is_exists_in_children(self, folder):
+        is_exists_folder = [child.path == folder.path for child in self.children]
+        return True in is_exists_folder
+
+    def add_child(self, folder: 'Folder'):
+        if self.is_exists_in_children(folder):
+            raise self.FolderException(
+                'Folder is already assigned to parent folder'
+            )
+        folder.parent = self
+        self.children.append(folder)
+
+    def remove_child(self, folder: 'Folder'):
+        if not self.is_exists_in_children(folder):
+            raise self.FolderException(
+                'Folder is not assigned to parent folder'
+            )
+        self.children.remove(folder)
+
+    def print_tree(self, indent=0):
+        indent_str = indent * ' '
+        print(f'{indent_str} {self.path}')
         for child in self.children:
-            child = child.replace(self.path, '').replace('/', '', 1)
-            child_folders = child.split('/')
-            for i, folder in enumerate(child_folders):
-                folder_name = (i + 1) * space_count * space + folder
-                tree.append(folder_name)
-        print('\n'.join(tree))
+            child.print_tree(indent=indent + 4)
 
     def create(self):
+        try:
+            os.makedirs(self.full_path)
+        except FileExistsError as e:
+            raise self.FolderException() from e
         for child in self.children:
-            if not os.path.exists(child):
-                try:
-                    os.makedirs(child)
-                except OSError as e:
-                    raise e
-            else:
-                continue
-        self.children.clear()
-        self.root_folder_id.clear()
+            child.create()
 
     def clean(self):
         try:
             shutil.rmtree(self.path)
         except FileNotFoundError as e:
-            raise e
+            raise self.FolderException() from e
 
     @staticmethod
     def read(path):
         list_dirs = []
         for _, dirs, _ in os.walk(path):
             for folder in dirs:
-                list_dirs.append('/{}\n'.format(folder))
+                list_dirs.append('/{}'.format(folder))
         return list_dirs
 
     def compress(self):
